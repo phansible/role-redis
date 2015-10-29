@@ -5,6 +5,9 @@ python: "2.7"
 env:
   - PLAYBOOK=test.yml
 
+before_install:
+  - sudo apt-get update -qq
+  
 install:
   # Install Ansible.
   - pip install ansible
