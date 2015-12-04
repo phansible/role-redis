@@ -4,3 +4,4 @@ redis_path: '/opt/redis'
 redis_conf_path: '/etc/redis'
 redis_db_path: '/var/lib/redis'
 redis_pid_path: '/var/run/redis'
+redis_port: 6379
