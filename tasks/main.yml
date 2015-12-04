@@ -11,4 +11,4 @@
   notify: restart redis
 
 - name: Ensure redis is started
-  service: name=redis state=started
+  service: name=redis-server state=started
