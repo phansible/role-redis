@@ -7,7 +7,7 @@
   apt: name=redis-server state=installed
 
 - name: Create config file
-  template: src=conf.tpl dest={{ redis_conf_path }}/{{ redis_port }}.conf
+  template: src=conf.tpl dest={{ redis.conf_path }}/{{ redis.port }}.conf
   notify: restart redis
 
 - name: Ensure redis is started
