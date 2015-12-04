@@ -1,4 +1,8 @@
 ---
+- name: Ensure packages database is up to date
+  sudo: yes
+  apt: update_cache=yes
+
 - name: Checking Redis installation
   shell: 'test -f {{ redis_path }}/bin/redis-cli && echo "yes" || echo "no"'
   changed_when: False
