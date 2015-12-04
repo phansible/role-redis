@@ -30,3 +30,8 @@ script:
     | grep -q 'changed=0.*failed=0'
     && (echo 'Idempotence test: pass' && exit 0)
     || (echo 'Idempotence test: fail' && exit 1)
+
+  # Make sure Redis is running, and can be stopped and started cleanly.
+  - sudo service redis-server status
+  - sudo service redis-server stop
+  - sudo service redis-server start
