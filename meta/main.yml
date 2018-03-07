@@ -11,6 +11,6 @@ galaxy_info:
     versions:
     - trusty
     - xenial
-  categories:
+  galaxy_tags:
     - database
     - database:nosql
