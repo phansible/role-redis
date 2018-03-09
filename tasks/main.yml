@@ -1,7 +1,7 @@
 ---
 - name: Ensure packages database is up to date
   become: yes
-  apt: update_cache=yes
+  apt: update_cache=yes cache_valid_time=3600
 
 - name: Install Redis
   apt: name=redis-server state=installed
