@@ -17,14 +17,18 @@ Defaults from `defaults/main.yml`:
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `redis.conf_path` | `/etc/redis` | Directory the role writes `<port>.conf` into |
-| `redis.port` | `6379` | Port set in the generated config, also used as its file name |
-| `redis.db_path` | `/var/lib/redis` | Parent of the data directory (`<db_path>/<port>`) in the generated config |
-| `redis.pid_path` | `/var/run/redis` | Directory for the pid file (`<pid_path>/<port>.pid`) in the generated config |
+| `redis.conf_path` | `/etc/redis` | Directory holding the packaged `redis.conf`; the role writes `phansible.conf` there |
+| `redis.port` | `6379` | Port Redis listens on, also the name of the data directory |
+| `redis.bind` | `0.0.0.0` | Addresses Redis listens on |
+| `redis.db_path` | `/var/lib/redis` | Parent of the data directory (`<db_path>/<port>`) |
 
 `redis` is a single map, so overriding it replaces all four keys.
 
-The generated `<conf_path>/<port>.conf` is not read by the packaged `redis-server` service, which uses `/etc/redis/redis.conf`. Redis runs with the package defaults (port 6379, bound to localhost).
+The role writes these settings to `<conf_path>/phansible.conf` and appends `include <conf_path>/phansible.conf` to the packaged `redis.conf`. Redis applies the last occurrence of a directive, so the role's values win over the package defaults and the rest of `redis.conf` stays as packaged.
+
+The packaged `redis-server` unit only allows writes under `/var/lib/redis`, `/var/log/redis`, `/run/redis` and `/etc/redis`, so keep `db_path` under `/var/lib/redis`.
+
+Redis 8 runs with `protected-mode yes`. With no password set it only answers clients on the loopback interface, even when bound to `0.0.0.0`. To reach it from the host, set a password (`requirepass`) or turn protected mode off in `redis.conf`.
 
 ## Dependencies
 

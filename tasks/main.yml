@@ -39,9 +39,32 @@
   become: yes
   apt: name=redis-server state=present
 
+- name: Create data directory
+  become: yes
+  file:
+    path: "{{ redis.db_path }}/{{ redis.port }}"
+    state: directory
+    owner: redis
+    group: redis
+    mode: '0750'
+
 - name: Create config file
   become: yes
-  template: src=conf.tpl dest={{ redis.conf_path }}/{{ redis.port }}.conf
+  template:
+    src: phansible.conf.j2
+    dest: "{{ redis.conf_path }}/phansible.conf"
+    owner: root
+    group: redis
+    mode: '0640'
+  notify: restart redis
+
+# Redis applies the last occurrence of a directive, so the include has to stay at the end
+- name: Include config file from the packaged redis.conf
+  become: yes
+  lineinfile:
+    path: "{{ redis.conf_path }}/redis.conf"
+    line: "include {{ redis.conf_path }}/phansible.conf"
+    insertafter: EOF
   notify: restart redis
 
 - name: Ensure redis is started

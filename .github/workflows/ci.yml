@@ -49,10 +49,16 @@ jobs:
         run: |
           docker exec test systemctl is-active redis-server
           docker exec test redis-server --version
-          docker exec test redis-cli ping | grep -qx PONG
+          docker exec test redis-cli -p 6380 ping | grep -qx PONG
+
+      - name: Check the role's config is live
+        run: |
+          docker exec test redis-cli -p 6380 config get dir | grep -qx /var/lib/redis/6380
+          docker exec test redis-cli -p 6380 config get bind | grep -qx 0.0.0.0
 
       - name: Check Redis stops and starts cleanly
         run: |
           docker exec test systemctl stop redis-server
           docker exec test systemctl start redis-server
           docker exec test systemctl is-active redis-server
+          docker exec test redis-cli -p 6380 ping | grep -qx PONG

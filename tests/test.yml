@@ -1,5 +1,11 @@
 ---
 - hosts: all
   remote_user: root
+  vars:
+    redis:
+      conf_path: '/etc/redis'
+      db_path: '/var/lib/redis'
+      port: 6380
+      bind: '0.0.0.0'
   roles:
     - role-redis
