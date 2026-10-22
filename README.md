@@ -1,24 +1,46 @@
 # Phansible Role: Redis
 
-[![Build Status](https://travis-ci.org/phansible/role-redis.svg?branch=master)](https://travis-ci.org/phansible/role-redis)
+[![CI](https://github.com/phansible/role-redis/actions/workflows/ci.yml/badge.svg)](https://github.com/phansible/role-redis/actions/workflows/ci.yml)
 
-An Ansible Role that installs [Redis](http://redis.io/) on Ubuntu specifically created with [Phansible](http://phansible.com/) in mind.
+An Ansible Role that installs [Redis](https://redis.io/) from the official packages.redis.io apt repository on Ubuntu and Debian, created with [Phansible](http://phansible.com/) in mind.
 
 ## Requirements
 
-// TODO
+- Ubuntu 22.04, 24.04, 26.04 or Debian 12, 13 (x86_64)
+- Ansible >= 2.15
+- Root access or `become` on the target
+- HTTPS access to packages.redis.io
 
 ## Role Variables
 
-// TODO
+Defaults from `defaults/main.yml`:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `redis.conf_path` | `/etc/redis` | Directory holding the packaged `redis.conf`; the role writes `phansible.conf` there |
+| `redis.port` | `6379` | Port Redis listens on, also the name of the data directory |
+| `redis.bind` | `0.0.0.0` | Addresses Redis listens on |
+| `redis.db_path` | `/var/lib/redis` | Parent of the data directory (`<db_path>/<port>`) |
+
+`redis` is a single map, so overriding it replaces all four keys.
+
+The role writes these settings to `<conf_path>/phansible.conf` and appends `include <conf_path>/phansible.conf` to the packaged `redis.conf`. Redis applies the last occurrence of a directive, so the role's values win over the package defaults and the rest of `redis.conf` stays as packaged.
+
+The packaged `redis-server` unit only allows writes under `/var/lib/redis`, `/var/log/redis`, `/run/redis` and `/etc/redis`, so keep `db_path` under `/var/lib/redis`.
+
+Redis 8 runs with `protected-mode yes`. With no password set it only answers clients on the loopback interface, even when bound to `0.0.0.0`. To reach it from the host, set a password (`requirepass`) or turn protected mode off in `redis.conf`.
 
 ## Dependencies
 
-// TODO
+None.
 
 ## Example Playbook
 
-// TODO
+```yaml
+- hosts: all
+  roles:
+    - role-redis
+```
 
 ## License
 

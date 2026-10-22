@@ -1,14 +1,72 @@
 ---
-- name: Ensure packages database is up to date
+- name: Install repository prerequisites
   become: yes
-  apt: update_cache=yes cache_valid_time=3600
+  apt:
+    pkg: ca-certificates
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Ensure apt keyrings directory exists
+  become: yes
+  file: path=/etc/apt/keyrings state=directory mode=0755
+
+- name: Add Redis repository key
+  become: yes
+  get_url:
+    url: https://packages.redis.io/gpg
+    dest: /etc/apt/keyrings/redis.asc
+    mode: '0644'
+    force: no
+
+# distro packages are EOL upstream on jammy (6.0), noble and bookworm (7.0)
+- name: Add Redis repository
+  become: yes
+  deb822_repository:
+    name: redis
+    uris: https://packages.redis.io/deb
+    suites: "{{ ansible_facts.distribution_release }}"
+    components: main
+    signed_by: /etc/apt/keyrings/redis.asc
+    install_python_debian: yes
+  register: redis_repo
+
+- name: Update packages database for the Redis repository
+  become: yes
+  apt: update_cache=yes
+  when: redis_repo is changed
 
 - name: Install Redis
-  apt: name=redis-server state=installed
+  become: yes
+  apt: name=redis-server state=present
+
+- name: Create data directory
+  become: yes
+  file:
+    path: "{{ redis.db_path }}/{{ redis.port }}"
+    state: directory
+    owner: redis
+    group: redis
+    mode: '0750'
 
 - name: Create config file
-  template: src=conf.tpl dest={{ redis.conf_path }}/{{ redis.port }}.conf
+  become: yes
+  template:
+    src: phansible.conf.j2
+    dest: "{{ redis.conf_path }}/phansible.conf"
+    owner: root
+    group: redis
+    mode: '0640'
+  notify: restart redis
+
+# Redis applies the last occurrence of a directive, so the include has to stay at the end
+- name: Include config file from the packaged redis.conf
+  become: yes
+  lineinfile:
+    path: "{{ redis.conf_path }}/redis.conf"
+    line: "include {{ redis.conf_path }}/phansible.conf"
+    insertafter: EOF
   notify: restart redis
 
 - name: Ensure redis is started
+  become: yes
   service: name=redis-server state=started
