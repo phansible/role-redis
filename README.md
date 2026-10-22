@@ -1,6 +1,6 @@
 # Phansible Role: Redis
 
-[![Build Status](https://travis-ci.org/phansible/role-redis.svg?branch=master)](https://travis-ci.org/phansible/role-redis)
+[![CI](https://github.com/phansible/role-redis/actions/workflows/ci.yml/badge.svg)](https://github.com/phansible/role-redis/actions/workflows/ci.yml)
 
 An Ansible Role that installs [Redis](http://redis.io/) on Ubuntu specifically created with [Phansible](http://phansible.com/) in mind.
 

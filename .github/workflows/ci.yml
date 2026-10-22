@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      PLAYBOOK: test.yml
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      # Travis VMs answered yes to apt prompts by default
+      - name: Configure apt like Travis
+        run: echo 'APT::Get::Assume-Yes "true";' | sudo tee /etc/apt/apt.conf.d/90assume-yes
+
+      - name: 'Install Ansible'
+        run: 'pip install ansible'
+
+      - name: 'Add ansible.cfg to pick up roles path'
+        run: '{ echo ''[defaults]''; echo ''roles_path = ../''; } >> ansible.cfg'
+
+      - name: 'Check the role/playbook''s syntax'
+        run: 'ansible-playbook -i tests/inventory tests/$PLAYBOOK --syntax-check'
+
+      - name: 'Run the role/playbook with ansible-playbook'
+        run: 'ansible-playbook -i tests/inventory tests/$PLAYBOOK --connection=local --become'
+
+      - name: 'Run the role/playbook again, checking to make sure it''s idempotent'
+        run: 'ansible-playbook -i tests/inventory tests/$PLAYBOOK --connection=local --become | grep -q ''changed=0.*failed=0'' && (echo ''Idempotence test: pass'' && exit 0) || (echo ''Idempotence test: fail'' && exit 1)'
+
+      - name: 'Make sure Redis is running, and can be stopped and started cleanly'
+        run: 'sudo service redis-server status'
+
+      - name: 'Run: sudo service redis-server stop'
+        run: 'sudo service redis-server stop'
+
+      - name: 'Run: sudo service redis-server start'
+        run: 'sudo service redis-server start'
