@@ -7,8 +7,15 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['ubuntu:22.04', 'ubuntu:24.04', 'ubuntu:26.04', 'debian:12', 'debian:13']
+    name: ${{ matrix.image }}
     env:
-      PLAYBOOK: test.yml
+      ANSIBLE_ROLES_PATH: ..
+      ANSIBLE_FORCE_COLOR: '1'
+      PLAYBOOK: ansible-playbook -i test, -c community.docker.docker tests/test.yml
     steps:
       - uses: actions/checkout@v4
 
@@ -16,30 +23,36 @@ jobs:
         with:
           python-version: '3.13' # newest 3.x breaks ansible-core
 
-      # Travis VMs answered yes to apt prompts by default
-      - name: Configure apt like Travis
-        run: echo 'APT::Get::Assume-Yes "true";' | sudo tee /etc/apt/apt.conf.d/90assume-yes
+      - name: Install Ansible
+        run: pip install ansible
 
-      - name: 'Install Ansible'
-        run: 'pip install ansible'
+      # official image plus only what Ansible and services need: python3 and systemd as PID 1
+      - name: Start test container
+        run: |
+          docker build -t test-image - <<EOF
+          FROM ${{ matrix.image }}
+          RUN apt-get update && apt-get install -y --no-install-recommends python3 systemd systemd-sysv && rm -rf /var/lib/apt/lists/*
+          CMD ["/lib/systemd/systemd"]
+          EOF
+          docker run -d --name test --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw test-image
 
-      - name: 'Add ansible.cfg to pick up roles path'
-        run: '{ echo ''[defaults]''; echo ''roles_path = ../''; } >> ansible.cfg'
+      - name: Check the role/playbook's syntax
+        run: $PLAYBOOK --syntax-check
 
-      - name: 'Check the role/playbook''s syntax'
-        run: 'ansible-playbook -i tests/inventory tests/$PLAYBOOK --syntax-check'
+      - name: Run the role/playbook
+        run: $PLAYBOOK
 
-      - name: 'Run the role/playbook with ansible-playbook'
-        run: 'ansible-playbook -i tests/inventory tests/$PLAYBOOK --connection=local --become'
+      - name: Run the role/playbook again, checking to make sure it's idempotent
+        run: $PLAYBOOK | tee /dev/stderr | grep -q 'changed=0.*failed=0'
 
-      - name: 'Run the role/playbook again, checking to make sure it''s idempotent'
-        run: 'ansible-playbook -i tests/inventory tests/$PLAYBOOK --connection=local --become | grep -q ''changed=0.*failed=0'' && (echo ''Idempotence test: pass'' && exit 0) || (echo ''Idempotence test: fail'' && exit 1)'
+      - name: Check Redis is running and answers
+        run: |
+          docker exec test systemctl is-active redis-server
+          docker exec test redis-server --version
+          docker exec test redis-cli ping | grep -qx PONG
 
-      - name: 'Make sure Redis is running, and can be stopped and started cleanly'
-        run: 'sudo service redis-server status'
-
-      - name: 'Run: sudo service redis-server stop'
-        run: 'sudo service redis-server stop'
-
-      - name: 'Run: sudo service redis-server start'
-        run: 'sudo service redis-server start'
+      - name: Check Redis stops and starts cleanly
+        run: |
+          docker exec test systemctl stop redis-server
+          docker exec test systemctl start redis-server
+          docker exec test systemctl is-active redis-server
