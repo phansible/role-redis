@@ -46,4 +46,4 @@
 
 - name: Ensure redis is started
   become: yes
-  service: name=redis-server state=started enabled=yes
+  service: name=redis-server state=started
